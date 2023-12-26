@@ -2,50 +2,11 @@ import sys
 import json
 import curses
 
-class Menu:
-    def __init__(self, cmenu):
-        self.cmenu = cmenu
-        self.selection = 0
-        for i, item in enumerate(self.items):
-            self.cmenu.addstr(i, 0, item)
-            if i == curses.LINES - 1:
-                break
-
-        self.select(0)
-
-    def select(self, n):
-        self.cmenu.addstr(self.selection, 0, self.items[self.selection])
-        self.selection = n
-        self.cmenu.addstr(self.selection, 0, self.items[self.selection], curses.A_REVERSE)
-        self.cmenu.refresh()
-
-    def poll(self, stdscr):
-        while True:
-            match stdscr.getkey():
-                case 'j':
-                    self.select((self.selection + 1) % len(self.items))
-                case 'k':
-                    self.select((self.selection - 1) % len(self.items))
-
-class ObjectMenu(Menu):
-    def __init__(self, obj, cmenu):
-        self.obj = obj
-        self.items = list(obj.keys())
-        super().__init__(cmenu)
-
-class ArrayMenu(Menu):
-    def __init__(self, array, cmenu):
-        self.array = array
-        self.items = [f'[{i}]' for i in range(len(array))]
-        super().__init__(cmenu)
-
-class Element(Menu):
-    def __init__(self, cmenu):
-        self.items = ['---']
-        super().__init__(cmenu)
-
-
 def jsonmenu(stdscr, j):
+    curses.curs_set(False)
+    sel = 0
+    pressed = None
+
     while True:
         stdscr.clear()
 
@@ -55,7 +16,6 @@ def jsonmenu(stdscr, j):
             stdscr.addch(i, menu_width - 1, '|')
         stdscr.refresh()
 
-        cur = j
         elem = False
         match j:
             case {}:
@@ -70,7 +30,6 @@ def jsonmenu(stdscr, j):
         for i, item in enumerate(items):
             menu.addstr(i, 0, item[0])
 
-        sel = 0
         menu.addstr(sel, 0, items[sel][0], curses.A_REVERSE)
         menu.refresh(0, 0, 0, 0, curses.LINES - 1, menu_width - 2)
 
@@ -81,7 +40,12 @@ def jsonmenu(stdscr, j):
         disp.refresh(0, 0, 0, menu_width + 1, curses.LINES - 1, curses.COLS - 1)
 
         while True:
-            pressed = stdscr.getkey()
+            dims = curses.LINES, curses.COLS
+            if pressed is None:
+                pressed = stdscr.getkey()
+                curses.update_lines_cols()
+                if dims != (curses.LINES, curses.COLS):
+                    break
             match pressed:
                 case 'j':
                     menu.addstr(sel, 0, items[sel][0])
@@ -90,13 +54,20 @@ def jsonmenu(stdscr, j):
                     menu.addstr(sel, 0, items[sel][0])
                     sel = (sel - 1) % len(items)
                 case 'l':
+                    pressed = None
                     if not elem:
-                        jsonmenu(stdscr, items[sel][1])
+                        while not jsonmenu(stdscr, items[sel][1]):
+                            pass
                         break
                 case 'h':
-                    return
+                    return True
+                case 'q':
+                    sys.exit(0)
                 case _:
+                    pressed = None
                     continue
+            pressed = None
+
             menu.addstr(sel, 0, items[sel][0], curses.A_REVERSE)
             if sel < curses.LINES - 4 or len(items) < curses.LINES:
                 scroll = 0
@@ -113,13 +84,7 @@ def jsonmenu(stdscr, j):
             disp.refresh(0, 0, 0, menu_width + 1, curses.LINES - 1, curses.COLS - 1)
 
 
-    disp.refresh(0, 0, 0, menu_width, curses.LINES, curses.COLS)
-
-    if isinstance(j, dict):
-        m = ObjectMenu(j, menu)
-        m.poll(stdscr)
-
-
 if __name__ == '__main__':
     with open('test.json') as f:
-        curses.wrapper(jsonmenu, json.load(f))
+        j = json.load(f)
+        curses.wrapper(jsonmenu, j)
