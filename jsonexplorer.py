@@ -1,6 +1,14 @@
-import sys
 import json
+import sys
+import textwrap
+
 import curses
+
+def prettyprint(j, width, literal=False):
+    s = str(j) if literal else json.dumps(j, indent=4)
+    for line in s.split('\n'):
+        for sub in textwrap.wrap(line, width):
+            yield sub
 
 def jsonmenu(stdscr, j, selector=''):
     curses.curs_set(False)
@@ -27,7 +35,7 @@ def jsonmenu(stdscr, j, selector=''):
             case [*_]:
                 items = [(f'[{i}]', x) for i, x in enumerate(j)]
             case _:
-                items = [('---', j)]
+                items = [('', j)]
                 elem = True
         menu = curses.newpad(len(items), menu_width)
 
@@ -37,7 +45,7 @@ def jsonmenu(stdscr, j, selector=''):
         menu.addstr(sel, 0, items[sel][0], curses.A_REVERSE)
         menu.refresh(0, 0, 2, 0, curses.LINES - 1, menu_width - 2)
 
-        outlines = json.dumps(items[sel][1], indent=4).split('\n')
+        outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem))
         disp = curses.newpad(len(outlines), max(len(x) for x in outlines)+1)
         for i, line in enumerate(outlines):
             disp.addstr(i, 0, line)
@@ -58,14 +66,14 @@ def jsonmenu(stdscr, j, selector=''):
                     menu.addstr(sel, 0, items[sel][0])
                     sel = (sel - 1) % len(items)
                 case 'l':
-                    pressed = None
                     if not elem:
+                        pressed = None
                         s = '.' + items[sel][0]
-                        while not jsonmenu(stdscr, items[sel][1], selector + s):
-                            pass
+                        jsonmenu(stdscr, items[sel][1], selector + s)
                         break
                 case 'h':
-                    return True
+                    if selector:
+                        return
                 case 'q':
                     sys.exit(0)
                 case _:
@@ -80,7 +88,7 @@ def jsonmenu(stdscr, j, selector=''):
                 scroll = min(sel + 6 - curses.LINES, len(items) - curses.LINES + 2)
             menu.refresh(scroll, 0, 2, 0, curses.LINES - 1, menu_width - 2)
 
-            outlines = json.dumps(items[sel][1], indent=4).split('\n')
+            outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem))
             disp.clear()
             disp.refresh(0, 0, 2, menu_width, curses.LINES - 1, curses.COLS - 1)
             disp = curses.newpad(len(outlines), max(len(x) for x in outlines)+1)
