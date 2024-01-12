@@ -98,6 +98,17 @@ def jsonmenu(stdscr, j, selector=''):
 
 
 if __name__ == '__main__':
-    with open('test.json') as f:
-        j = json.load(f)
-        curses.wrapper(jsonmenu, j)
+    path = None
+    if len(sys.argv) == 3:
+        if sys.argv[1] == '--':
+            path = sys.argv[2]
+        else:
+            sys.exit("Too many arguments")
+    elif len(sys.argv) == 2 and sys.argv[1] != '-':
+        path = sys.argv[1]
+
+    if path:
+        with open(path) as f:
+            curses.wrapper(jsonmenu, json.load(f))
+    else:
+        curses.wrapper(jsonmenu, json.load(sys.stdin))
