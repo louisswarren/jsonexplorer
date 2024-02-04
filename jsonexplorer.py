@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import sys
 import textwrap
@@ -37,6 +39,9 @@ def jsonmenu(stdscr, j, selector=''):
             case _:
                 items = [('', j)]
                 elem = True
+        if not items:
+            items = [('', '(Empty)')]
+            elem = True
         menu = curses.newpad(len(items), menu_width)
 
         for i, item in enumerate(items):
@@ -45,7 +50,7 @@ def jsonmenu(stdscr, j, selector=''):
         menu.addstr(sel, 0, items[sel][0], curses.A_REVERSE)
         menu.refresh(0, 0, 2, 0, curses.LINES - 1, menu_width - 2)
 
-        outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem))
+        outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem)) or ['']
         disp = curses.newpad(len(outlines), max(len(x) for x in outlines)+1)
         for i, line in enumerate(outlines):
             disp.addstr(i, 0, line)
@@ -88,7 +93,7 @@ def jsonmenu(stdscr, j, selector=''):
                 scroll = min(sel + 6 - curses.LINES, len(items) - curses.LINES + 2)
             menu.refresh(scroll, 0, 2, 0, curses.LINES - 1, menu_width - 2)
 
-            outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem))
+            outlines = list(prettyprint(items[sel][1], curses.COLS - menu_width, elem)) or ['']
             disp.clear()
             disp.refresh(0, 0, 2, menu_width, curses.LINES - 1, curses.COLS - 1)
             disp = curses.newpad(len(outlines), max(len(x) for x in outlines)+1)
