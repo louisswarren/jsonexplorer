@@ -12,7 +12,7 @@ def prettyprint(j, width, literal=False):
         for sub in textwrap.wrap(line, width):
             yield sub
 
-def jsonmenu(stdscr, j, selector=''):
+def jsonmenu(stdscr, j, outpath, selector=''):
     curses.curs_set(False)
     sel = 0
     pressed = None
@@ -74,13 +74,20 @@ def jsonmenu(stdscr, j, selector=''):
                     if not elem:
                         pressed = None
                         s = '.' + items[sel][0]
-                        jsonmenu(stdscr, items[sel][1], selector + s)
+                        jsonmenu(stdscr, items[sel][1], outpath, selector + s)
                         break
                 case 'h':
                     if selector:
                         return
                 case 'q':
                     sys.exit(0)
+                case 'w':
+                    try:
+                        with open(outpath + '@' + selector, 'x') as outf:
+                            outf.write(json.dumps(j))
+                        stdscr.addstr(1, 0, "Wrote @" + selector, curses.A_REVERSE)
+                    except Exception as e:
+                        stdscr.addstr(1, 0, str(e), curses.A_REVERSE)
                 case _:
                     pressed = None
                     continue
@@ -114,6 +121,6 @@ if __name__ == '__main__':
 
     if path:
         with open(path) as f:
-            curses.wrapper(jsonmenu, json.load(f))
+            curses.wrapper(jsonmenu, json.load(f), path)
     else:
-        curses.wrapper(jsonmenu, json.load(sys.stdin))
+        curses.wrapper(jsonmenu, json.load(sys.stdin), "stdin")
